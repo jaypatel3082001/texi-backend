@@ -1,6 +1,10 @@
 const fs = require("fs").promises; // Use the promise version of fs
 const filePath = "./userCount.json";
 const nodemailer = require("nodemailer");
+const { kv } = require("@vercel/kv");
+// Import Vercel KV SDK
+
+const userCountKey = "userCount"; 
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -75,46 +79,6 @@ const sendEmail = async (to, subject, data) => {
     console.error("Error sending email: ", error);
   }
 };
-
-async function userCount(req, res) {
-  try {
-    // Increment user count before reading it
-    const { revisedIp } = req.query;
-    // console.log(req.ip)
-    let userIp = req.ip;
-    if (revisedIp) {
-      res.status(401).json(`you have already visited page`);
-    }
-    await incrementUserCount();
-
-    // Read the updated user count
-    const data = await fs.readFile(filePath, "utf8");
-
-    // Safely parse JSON
-    let userCount;
-    if (data) {
-      try {
-        userCount = JSON.parse(data);
-      } catch (error) {
-        // If JSON parsing fails, initialize with 0
-        userCount = { userCount: 0 };
-      }
-    } else {
-      // Handle empty file case
-      userCount = { userCount: 0 };
-    }
-    userCount = userCount.userCount;
-    // Send response with updated user count
-    res.status(201).json({ data: { userCount, userIp } });
-  } catch (error) {
-    if (error.code === "ENOENT") {
-      // Handle file not found case
-      res.status(400).json(`user file not found: ${error.message}`);
-    } else {
-      res.status(500).json(`Internal server error: ${error.message}`);
-    }
-  }
-}
 async function emailSender(req, res) {
   try {
     // Increment user count before reading it
@@ -132,39 +96,50 @@ async function emailSender(req, res) {
     res.status(500).json(`Internal server error: ${error}`);
   }
 }
+async function userCount(req, res) {
+  try {
+    const { revisedIp } = req.query;
+    let userIp = req.ip;
+
+    if (revisedIp) {
+      return res.status(401).json(`You have already visited the page`);
+    }
+
+    // Increment user count using Vercel KV
+    await incrementUserCount();
+
+    // Retrieve the updated user count from KV
+    let userCount = await kv.get(userCountKey);
+    if (!userCount) {
+      userCount = 0; // Initialize user count if it's not in KV
+    }
+
+    // Send response with updated user count and user IP
+    res.status(201).json({ data: { userCount, userIp } });
+  } catch (error) {
+    console.error(`Internal server error: ${error.message}`);
+    res.status(500).json(`Internal server error: ${error.message}`);
+  }
+}
+
 
 const incrementUserCount = async () => {
   try {
-    let countData;
-    try {
-      // Try reading the file
-      const data = await fs.readFile(filePath, "utf8");
-      if (data) {
-        try {
-          countData = JSON.parse(data);
-        } catch (error) {
-          // Handle corrupted JSON
-          countData = { userCount: 0 };
-        }
-      } else {
-        // If the file is empty, start with userCount = 0
-        countData = { userCount: 0 };
-      }
-    } catch (error) {
-      if (error.code === "ENOENT") {
-        // If the file doesn't exist, start with userCount = 0
-        countData = { userCount: 0 };
-      } else {
-        throw error;
-      }
+    // Get the current user count from Vercel KV
+    let countData = await kv.get(userCountKey);
+    
+    // If the key doesn't exist, initialize the user count
+    if (!countData) {
+      countData = 0;
     }
 
     // Increment the user count
-    countData.userCount++;
+    countData++;
 
-    // Write the updated count back to the file
-    await fs.writeFile(filePath, JSON.stringify(countData));
-    console.log(`User count updated: ${countData.userCount}`);
+    // Set the updated user count in Vercel KV
+    await kv.set(userCountKey, countData);
+
+    console.log(`User count updated: ${countData}`);
   } catch (error) {
     console.error(`Failed to update user count: ${error.message}`);
     throw error;
