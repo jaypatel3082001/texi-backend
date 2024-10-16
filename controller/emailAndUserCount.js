@@ -1,10 +1,10 @@
 const fs = require("fs").promises; // Use the promise version of fs
-const filePath = "./userCount.json";
+// const filePath = "./userCount.json";
 const nodemailer = require("nodemailer");
 const { kv } = require("@vercel/kv");
 // Import Vercel KV SDK
 
-const userCountKey = "userCount"; 
+const userCountKey = "db-userCount";
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -122,12 +122,11 @@ async function userCount(req, res) {
   }
 }
 
-
 const incrementUserCount = async () => {
   try {
     // Get the current user count from Vercel KV
     let countData = await kv.get(userCountKey);
-    
+
     // If the key doesn't exist, initialize the user count
     if (!countData) {
       countData = 0;
