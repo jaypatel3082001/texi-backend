@@ -4,7 +4,7 @@ const nodemailer = require("nodemailer");
 const { kv } = require("@vercel/kv");
 // Import Vercel KV SDK
 
-const userCountKey = "db-userCount";
+const userCountKey = "userCount";
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
