@@ -45,6 +45,10 @@ const sendEmail = async (to, subject, data) => {
         <div style="font-weight: bold; color: #555;">total distance</div>
         <div style="font-size: 16px; color: #333;">${data.totalDistance}km</div>
     </div>
+    <div style="margin-bottom: 15px;">
+        <div style="font-weight: bold; color: #555;">total passengers</div>
+        <div style="font-size: 16px; color: #333;">${data.passengerCount}</div>
+    </div>
 
     <div style="margin-bottom: 15px;">
         <div style="font-weight: bold; color: #555;">Person is Disabled:</div>
