@@ -101,12 +101,13 @@ async function userCount(req, res) {
     const { revisedIp } = req.query;
     let userIp = req.ip;
 
-    if (revisedIp) {
-      return res.status(401).json(`You have already visited the page`);
+    if (!revisedIp) {
+      await incrementUserCount();
     }
+    // return res.status(401).json(`You have already visited the page`);
 
     // Increment user count using Vercel KV
-    await incrementUserCount();
+    // await incrementUserCount();
 
     // Retrieve the updated user count from KV
     let userCount = await kv.get(userCountKey);
